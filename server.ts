@@ -466,6 +466,7 @@ app.get("/api/proxy/xtream", async (req, res) => {
 // API: CORS and Mixed-Content Stream Proxy for IPTV video and HLS chunks
 app.get("/api/proxy/stream", async (req, res) => {
   const streamUrl = req.query.url as string;
+  console.log(`[Proxy] Requesting stream URL: ${streamUrl}`);
   if (!streamUrl) {
     return res.status(400).send("Stream URL parameter is required");
   }

@@ -8,7 +8,7 @@ import {
   Tv, Film, Clapperboard, Settings, ShieldAlert, Globe, 
   Search, Lock, Star, ChevronRight, Play, RefreshCw, Key, 
   Sparkles, Check, ChevronDown, ListPlus, Volume2, Info, 
-  ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle, HardDrive
+  ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle, HardDrive, Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -24,6 +24,7 @@ import DisclaimerView from './components/DisclaimerView';
 import FlixGhostIcon from './components/FlixGhostIcon';
 import SplashView from './components/SplashView';
 import SmartCleanupPanel from './components/SmartCleanupPanel';
+import NativeBlueprintView from './components/NativeBlueprintView';
 import Hls from 'hls.js';
 
 export default function App() {
@@ -35,7 +36,7 @@ export default function App() {
   
   // App UI State
   const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState<'live' | 'movies' | 'series' | 'portal' | 'settings' | 'disclaimer'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'movies' | 'series' | 'portal' | 'settings' | 'disclaimer' | 'native_blueprint'>('live');
   const [lang, setLang] = useState<'ar' | 'en'>('en'); // Default to English, with easy Arabic toggle
   const [theme, setTheme] = useState<'blue' | 'emerald' | 'crimson' | 'onyx' | 'elegant'>('elegant');
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
@@ -47,6 +48,33 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [recentlyWatched, setRecentlyWatched] = useState<PlaylistItem[]>(() => {
+    const saved = localStorage.getItem('flixnet_recently_watched');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
+
+  const addToRecentlyWatched = (item: PlaylistItem) => {
+    if (item.type !== 'live') return;
+    setRecentlyWatched(prev => {
+      const filtered = prev.filter(p => p.id !== item.id);
+      const updated = [item, ...filtered].slice(0, 5);
+      localStorage.setItem('flixnet_recently_watched', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearRecentlyWatched = () => {
+    setRecentlyWatched([]);
+    localStorage.removeItem('flixnet_recently_watched');
+  };
   
   // Selected detail pages (Movies / Series)
   const [selectedMovie, setSelectedMovie] = useState<PlaylistItem | null>(null);
@@ -407,13 +435,16 @@ export default function App() {
     
     // Resolve external URLs to our stream proxy to bypass CORS/Mixed-Content blocks
     let playUrl = originalUrl;
+    console.log(`[Playback] Original URL: ${originalUrl}`);
     if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
       playUrl = `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
     }
+    console.log(`[Playback] Resolved Play URL: ${playUrl}`);
 
     const isHls = originalUrl.toLowerCase().includes('.m3u8') || 
                   originalUrl.toLowerCase().includes('/hls/') || 
                   originalUrl.toLowerCase().includes('m3u8');
+    console.log(`[Playback] Is HLS: ${isHls}`);
 
     if (isHls) {
       if (Hls.isSupported()) {
@@ -619,6 +650,7 @@ export default function App() {
       series: "TV Series",
       uploadPortal: "Sync Playlist Portal",
       settings: "Device Settings",
+      smartTvPlan: "Smart TV Blueprint",
       disclaimer: "Legal Disclaimer",
       noPlaylists: "No IPTV Playlists Sync\'d",
       macAddress: "MAC Address:",
@@ -670,6 +702,7 @@ export default function App() {
       series: "المسلسلات والدراما",
       uploadPortal: "بوابة رفع ملفات القنوات",
       settings: "إعدادات الجهاز",
+      smartTvPlan: "مخطط التلفزيون الذكي",
       disclaimer: "إخلاء المسؤولية القانونية",
       noPlaylists: "لا توجد قوائم قنوات مضافة حالياً",
       macAddress: "عنوان الـ MAC للجهاز:",
@@ -961,6 +994,18 @@ export default function App() {
               <Settings className="w-5 h-5 shrink-0" />
               <span className="hidden md:inline font-bold text-sm">{trans.settings}</span>
             </button>
+
+            <button
+              onClick={() => { setActiveTab('native_blueprint'); setSelectedMovie(null); setSelectedSeries(null); }}
+              className={`w-full p-3 md:px-4 md:py-3.5 rounded-xl flex items-center gap-3 transition-all duration-200 ${
+                activeTab === 'native_blueprint' 
+                  ? `${activeTheme.bgActive} text-white shadow-lg` 
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <Cpu className="w-5 h-5 shrink-0" />
+              <span className="hidden md:inline font-bold text-sm">{trans.smartTvPlan}</span>
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -984,7 +1029,8 @@ export default function App() {
         </nav>
 
         {/* Content Panel Area */}
-        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 bg-black/20 relative z-0">
+        <div className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 bg-black/20 relative z-0">
+
 
           {/* SUBSCRIPTION EXPIRED / CHANNELS LOCKED OVERLAY */}
           {deviceStatus?.status === 'expired' && ['live', 'movies', 'series'].includes(activeTab) && (
@@ -1219,68 +1265,108 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Middle Column: Channels List Grid (lg:col-span-5) */}
-              <div className="lg:col-span-5 flex flex-col gap-4">
-                <div className="flex justify-between items-center px-1">
-                  <h3 className="text-white font-bold text-md tracking-tight">
-                    {selectedCategory || trans.all}
-                  </h3>
-                  <span className="text-xs text-gray-500">
-                    {getFilteredItems().length} {isAr ? 'قناة متوفرة' : 'channels matching'}
-                  </span>
-                </div>
-
-                <div className="bg-gray-950/20 border border-gray-900/40 p-2 rounded-2xl flex-1 overflow-y-auto max-h-[500px] lg:max-h-[600px] space-y-1">
-                  {getFilteredItems().length === 0 ? (
-                    <div className="text-center py-12 text-gray-500 text-sm">
-                      {isAr ? 'لا توجد قنوات مطابقة للبحث أو المجموعات.' : 'No channels found matching search query.'}
+              {/* Middle Column: Channel List & Recently Watched (lg:col-span-5) */}
+              <div className="lg:col-span-5 flex flex-col gap-4 h-full min-h-[500px]">
+                {/* Recently Watched Section */}
+                {recentlyWatched.length > 0 && (
+                  <div className="bg-gray-950/40 border border-gray-900/50 rounded-xl p-4 space-y-3 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-white font-bold text-sm flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" />
+                        <span>{isAr ? 'شوهد مؤخراً' : 'Recently Watched'}</span>
+                      </h3>
+                      <button
+                        onClick={clearRecentlyWatched}
+                        className="text-[10px] text-gray-500 hover:text-rose-400 font-medium transition-colors"
+                      >
+                        {isAr ? 'مسح السجل' : 'Clear History'}
+                      </button>
                     </div>
-                  ) : (
-                    getFilteredItems().map((item, idx) => {
-                      const isCurrentPlaying = activePlayback?.item.id === item.id;
-                      return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {recentlyWatched.map((channel) => (
                         <div
-                          key={item.id}
-                          onClick={() => setActivePlayback({ item, playlistId: activePlaylistId, index: idx, streamUrl: item.url })}
-                          className={`group w-full p-3 rounded-xl flex items-center justify-between gap-3 transition-all duration-200 cursor-pointer ${
-                            isCurrentPlaying 
-                              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-md' 
-                              : 'hover:bg-white/5 border border-transparent'
+                          key={`recent-${channel.id}`}
+                          onClick={() => {
+                            setActivePlayback({ item: channel, playlistId: activePlaylistId, index: 0, streamUrl: channel.url });
+                            addToRecentlyWatched(channel);
+                          }}
+                          className={`group p-2 bg-black/40 hover:bg-black/80 border rounded-xl flex items-center gap-3 transition-all cursor-pointer hover:scale-[1.01] ${
+                            activePlayback?.item.id === channel.id
+                              ? `border-${activeTheme.colorName}-500 bg-${activeTheme.colorName}-500/10`
+                              : 'border-gray-900/40 hover:border-gray-800'
                           }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {/* Logo */}
-                            <div className="w-10 h-10 rounded-lg bg-black border border-gray-900 flex items-center justify-center overflow-hidden shrink-0">
-                              {item.logo ? (
-                                <img src={item.logo} alt="" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                              ) : (
-                                <Tv className="w-5 h-5 text-gray-700" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <h4 className={`font-bold text-sm truncate ${isCurrentPlaying ? 'text-blue-400' : 'text-white'}`}>
-                                {item.name}
-                              </h4>
-                              <p className="text-xs text-gray-500 truncate">{item.group}</p>
-                            </div>
+                          <div className="w-9 h-9 rounded-lg bg-black/60 border border-gray-900 flex items-center justify-center overflow-hidden shrink-0">
+                            {channel.logo ? (
+                              <img src={channel.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Tv className="w-4 h-4 text-gray-600" />
+                            )}
                           </div>
-
-                          {/* Quick Fav star and Play indicators */}
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => toggleFavorite(item.id, e)}
-                              className="p-1.5 rounded-lg text-gray-500 hover:text-amber-500 hover:scale-110 active:scale-95 transition-all"
-                            >
-                              <Star className={`w-4 h-4 ${favorites.includes(item.id) ? 'fill-current text-amber-500' : ''}`} />
-                            </button>
-                            <span className="opacity-0 group-hover:opacity-100 p-1.5 bg-blue-600 text-white rounded-lg transition-opacity duration-200">
-                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                            </span>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-xs truncate text-white">{channel.name}</h4>
+                            <span className="text-[9px] text-gray-500 truncate block">{channel.group}</span>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Channel List Grid */}
+                <div className="bg-gray-950/40 border border-gray-900/50 rounded-xl p-4 flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-4 shrink-0">
+                    <h3 className="text-white font-bold text-sm">
+                      {selectedCategory || (isAr ? 'جميع القنوات' : 'All Channels')}
+                    </h3>
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-black/40 text-gray-400 font-mono">
+                      {getFilteredItems().length}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto max-h-[580px] space-y-2 pr-1 scrollbar-thin scrollbar-thumb-gray-900">
+                    {getFilteredItems().length > 0 ? (
+                      getFilteredItems().map((channel) => (
+                        <div
+                          key={channel.id}
+                          onClick={() => {
+                            setActivePlayback({ item: channel, playlistId: activePlaylistId, index: 0, streamUrl: channel.url });
+                            addToRecentlyWatched(channel);
+                          }}
+                          className={`group p-2.5 bg-black/20 hover:bg-black/60 border rounded-xl flex items-center gap-3 transition-all cursor-pointer hover:scale-[1.01] ${
+                            activePlayback?.item.id === channel.id
+                              ? `border-${activeTheme.colorName}-500 bg-${activeTheme.colorName}-500/10`
+                              : 'border-gray-900/40 hover:border-gray-800'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-black/60 border border-gray-900 flex items-center justify-center overflow-hidden shrink-0">
+                            {channel.logo ? (
+                              <img src={channel.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Tv className="w-5 h-5 text-gray-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-xs truncate text-white">{channel.name}</h4>
+                            <span className="text-[10px] text-gray-500 truncate block">{channel.group}</span>
+                          </div>
+                          <button
+                            onClick={(e) => toggleFavorite(channel.id, e)}
+                            className="text-gray-500 hover:text-amber-500 p-1 rounded-lg hover:bg-white/5 transition-colors shrink-0"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${favorites.includes(channel.id) ? 'fill-amber-500 text-amber-500' : ''}`} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-20 text-gray-600 space-y-3">
+                        <Tv className="w-10 h-10 mx-auto text-gray-800 stroke-1" />
+                        <p className="text-xs">
+                          {isAr ? 'لم يتم العثور على قنوات' : 'No channels found'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1358,10 +1444,10 @@ export default function App() {
                   )}
                 </div>
               </div>
-
             </div>
           )}
 
+            
           {/* MOVIES MODULE TAB */}
           {activeTab === 'movies' && allItems.length > 0 && !selectedMovie && deviceStatus?.status !== 'expired' && (
             <div className="space-y-6">
@@ -1776,6 +1862,17 @@ export default function App() {
                       🚀 {isAr ? 'تجديد مجاني تجريبي لعام كامل' : 'Simulate 1 Year Free'}
                     </button>
                   </div>
+
+                  {/* Link to Blueprint */}
+                  <div className="pt-2 border-t border-gray-900/60 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">{isAr ? 'مخطط الـ Flutter والتراخيص:' : 'Flutter TV & License Blueprints:'}</span>
+                    <button
+                      onClick={() => setActiveTab('native_blueprint')}
+                      className="text-xs text-blue-400 hover:underline font-bold flex items-center gap-1"
+                    >
+                      <span>{isAr ? 'عرض لوحة المخططات 📺' : 'View Blueprints Hub 📺'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-3 bg-blue-600/10 border border-blue-500/20 rounded-xl text-[11px] text-blue-400 text-center leading-relaxed">
@@ -1890,65 +1987,17 @@ export default function App() {
                           })}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Settings block 4: Smart Cleanup */}
-              <SmartCleanupPanel lang={lang} />
-
-              {/* Settings block 5: Diagnostics and Reset */}
-              <div className="bg-gray-950/80 border border-gray-900 p-6 rounded-2xl space-y-4">
-                <button
-                  onClick={handleClearCache}
-                  className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-500 rounded-xl font-bold text-sm transition-all text-center"
-                >
-                  {trans.clearCache}
-                </button>
-              </div>
-
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* STORE DISCLAIMER PANEL TAB */}
-          {activeTab === 'disclaimer' && (
-            <DisclaimerView lang={lang} />
-          )}
-
-        </main>
-      </div>
-
-      {/* FULL-SCREEN OVERLAY THEATER MOVIE / LIVE VIDEO PLAYER */}
-      {activePlayback && (
-        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center font-sans overflow-hidden">
-          <video
-            ref={videoRef}
-            className="w-full h-full max-h-screen object-contain"
-            autoPlay
-            controls={false} // We supply beautiful premium custom controls overlay!
-          />
-          
-          <PlayerControls
-            videoRef={videoRef}
-            item={activePlayback.item}
-            onClose={() => setActivePlayback(null)}
-            lang={lang}
-            themeColor={theme}
-            allChannelsInGroup={getFilteredItems()}
-            onChannelSelect={(newChannel) => {
-              setActivePlayback({
-                item: newChannel,
-                playlistId: activePlaylistId,
-                index: 0,
-                streamUrl: newChannel.url
-              });
-            }}
-          />
-        </div>
-      )}
-
-      {/* PARENTAL CONTROL SECURITY PIN DIALOG POPUP */}
+        {activeTab === 'native_blueprint' && (
+          <NativeBlueprintView lang={lang} activeTheme={activeTheme} />
+        )}
+              {/* PARENTAL CONTROL SECURITY PIN DIALOG POPUP */}
       {pinPromptOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
           <div className="bg-slate-950 border border-gray-900 p-6 md:p-8 rounded-2xl max-w-sm w-full text-center space-y-6 shadow-2xl">
@@ -1994,7 +2043,7 @@ export default function App() {
           </div>
         </div>
       )}
-
+      </div>
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-gray-900/60 px-2 py-2.5 flex justify-around items-center z-45 shadow-[0_-4px_12px_rgba(0,0,0,0.5)]">
         <button
@@ -2057,7 +2106,7 @@ export default function App() {
           <span className="text-[9px] font-bold tracking-tight">{isAr ? 'الإعدادات' : 'Settings'}</span>
         </button>
       </div>
-
+      </div>
     </div>
   );
 }
