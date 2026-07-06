@@ -119,13 +119,71 @@ export default function PortalView({
     }
   }[lang];
 
-  // Auto-fill input if device details are passed
+  const getThemeBtnClasses = (isFullWidth = false, size: 'normal' | 'large' = 'normal') => {
+    let base = "rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 ";
+    if (isFullWidth) {
+      base += "w-full ";
+    }
+    
+    if (size === 'large') {
+      base += "py-3.5 px-4 text-sm ";
+    } else {
+      base += "py-2.5 px-5 text-xs md:text-sm ";
+    }
+    
+    switch (colorName) {
+      case 'amber':
+        return base + "bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/10 focus:ring-amber-500";
+      case 'rose':
+        return base + "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 focus:ring-rose-500";
+      case 'emerald':
+        return base + "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/10 focus:ring-emerald-500";
+      case 'onyx':
+        return base + "bg-gray-800 hover:bg-gray-700 text-white shadow-lg shadow-gray-800/10 focus:ring-gray-600";
+      case 'blue':
+      default:
+        return base + "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/10 focus:ring-blue-500";
+    }
+  };
+
+  // Auto-fill input and auto-login if device details are passed
   useEffect(() => {
     if (deviceMac) {
       setMacInput(deviceMac);
     }
     if (deviceKey) {
       setKeyInput(deviceKey);
+    }
+
+    if (deviceMac) {
+      const autoLogin = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(deviceMac)}`);
+          if (response.ok) {
+            const data = await response.json();
+            setPlaylists(data.playlists || []);
+            setIsLoggedIn(true);
+            
+            // Also load device subscription status in portal
+            const resSub = await fetch(`/api/device/status?mac=${encodeURIComponent(deviceMac)}&key=${encodeURIComponent(deviceKey)}`);
+            if (resSub.ok) {
+              const subData = await resSub.json();
+              setDeviceSub({
+                status: subData.status,
+                expiryDate: subData.expiryDate,
+                daysLeft: subData.daysLeft
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Portal auto-login failed:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      autoLogin();
     }
   }, [deviceMac, deviceKey]);
 
@@ -448,7 +506,7 @@ export default function PortalView({
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3.5 px-4 bg-${colorName}-600 hover:bg-${colorName}-500 text-${colorName === 'amber' ? 'black' : 'white'} rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2`}
+              className={getThemeBtnClasses(true, 'large')}
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -493,7 +551,7 @@ export default function PortalView({
             <div className="flex gap-2">
               <button
                 onClick={() => setShowAddForm(true)}
-                className={`py-2.5 px-4 bg-${colorName}-600 hover:bg-${colorName}-500 text-${colorName === 'amber' ? 'black' : 'white'} rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2`}
+                className={getThemeBtnClasses(false, 'normal')}
               >
                 <Plus className="w-4 h-4" />
                 <span>{dict.addBtn}</span>
@@ -726,7 +784,7 @@ export default function PortalView({
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`py-2.5 px-6 bg-${colorName}-600 hover:bg-${colorName}-500 text-${colorName === 'amber' ? 'black' : 'white'} rounded-xl text-sm font-bold transition-all flex items-center gap-2`}
+                    className={getThemeBtnClasses(false, 'normal')}
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
                     <span>{dict.saveBtn}</span>

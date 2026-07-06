@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" 
+        xmlns:tizen="http://tizen.org/ns/widgets" 
+        id="http://flixnettv.com/com.flixnettv.ghostplayer" 
+        version="1.0.0" 
+        viewmodes="fullscreen">
+        
+    <name>Flix Ghost Player</name>
+    <description>Flix Ghost Player - Standalone IPTV &amp; VOD Media Player for Smart TVs.</description>
+    <author href="https://flixnettv.com" email="flixnettv@gmail.com">FlixNetTV</author>
+    
+    <content src="index.html"/>
+    <icon src="icon.png"/>
+    
+    <!-- السماح بجميع الاتصالات لمنع مشاكل CORS مع روابط البث وقوائم M3U -->
+    <access origin="*" subdomains="true"/>
+    
+    <!-- تعريف التطبيق لبيئة تايزن (Tizen) -->
+    <!-- تنبيه: يجب استبدال المعرف tY7sW5pXz1 بمعرف شهادة المطور الخاصة بك عند الرفع لمتجر سامسونج -->
+    <tizen:application id="tY7sW5pXz1.FlixGhostPlayer" package="tY7sW5pXz1" required_version="3.0"/>
+    
+    <tizen:profile name="tv-samsung"/>
+    
+    <!-- أذونات النظام المطلوبة لتشغيل الوسائط والإنترنت -->
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.window"/>
+    <tizen:privilege name="http://tizen.org/privilege/volume.set"/>
+    <tizen:privilege name="http://tizen.org/privilege/download"/>
+    
+    <tizen:setting screen-orientation="landscape" 
+                   context-menu="disable" 
+                   background-support="disable" 
+                   encryption="disable" 
+                   install-location="auto" 
+                   receiver-touch-event="disable"/>
+                   
+</widget>

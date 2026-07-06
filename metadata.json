@@ -1,5 +1,5 @@
 {
-  "name": "FLIX GHOST IPTV",
+  "name": "Ghost Player",
   "description": "FLIX GHOST is the ultimate commercial-grade media player for Samsung Tizen, LG WebOS, Android TV and Apple TV. Stream Beyond Limits with cinematic neon layouts, high-performance playlist management, cloud synchronization, and full-screen controls.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

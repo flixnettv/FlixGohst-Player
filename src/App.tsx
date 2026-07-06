@@ -8,7 +8,7 @@ import {
   Tv, Film, Clapperboard, Settings, ShieldAlert, Globe, 
   Search, Lock, Star, ChevronRight, Play, RefreshCw, Key, 
   Sparkles, Check, ChevronDown, ListPlus, Volume2, Info, 
-  ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle, HardDrive, Cpu
+  ArrowLeft, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle, HardDrive, Cpu, Maximize, VolumeX, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -25,6 +25,7 @@ import FlixGhostIcon from './components/FlixGhostIcon';
 import SplashView from './components/SplashView';
 import SmartCleanupPanel from './components/SmartCleanupPanel';
 import NativeBlueprintView from './components/NativeBlueprintView';
+import CardHoverPreview from './components/CardHoverPreview';
 import Hls from 'hls.js';
 
 export default function App() {
@@ -37,7 +38,18 @@ export default function App() {
   // App UI State
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<'live' | 'movies' | 'series' | 'portal' | 'settings' | 'disclaimer' | 'native_blueprint'>('live');
-  const [lang, setLang] = useState<'ar' | 'en'>('en'); // Default to English, with easy Arabic toggle
+  const [lang, setLang] = useState<'ar' | 'en'>(() => {
+    const saved = localStorage.getItem('flixnet_lang');
+    if (saved === 'ar' || saved === 'en') return saved;
+    const browserLang = (typeof navigator !== 'undefined' && navigator.language) || '';
+    const detected = browserLang.toLowerCase().startsWith('ar') ? 'ar' : 'en';
+    try {
+      localStorage.setItem('flixnet_lang', detected);
+    } catch (e) {
+      console.error(e);
+    }
+    return detected;
+  }); // Default to device language (Arabic if browser is Arabic, else English)
   const [theme, setTheme] = useState<'blue' | 'emerald' | 'crimson' | 'onyx' | 'elegant'>('elegant');
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
@@ -53,7 +65,17 @@ export default function App() {
     const saved = localStorage.getItem('flixnet_recently_watched');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved) as PlaylistItem[];
+        // Auto-migrate demo channel URLs to the latest working ones in DEMO_CHANNELS
+        return parsed.map(item => {
+          if (item.id && item.id.startsWith('demo-')) {
+            const latest = DEMO_CHANNELS.find(ch => ch.id === item.id);
+            if (latest) {
+              return { ...item, url: latest.url, logo: latest.logo || item.logo };
+            }
+          }
+          return item;
+        });
       } catch (e) {
         console.error(e);
       }
@@ -84,6 +106,8 @@ export default function App() {
   // Active Playback Video
   const [activePlayback, setActivePlayback] = useState<ActivePlayback | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [showFullscreenPlayer, setShowFullscreenPlayer] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   // Parental PIN Lock
   const [parentalPin, setParentalPin] = useState('0000');
@@ -197,7 +221,6 @@ export default function App() {
       setCurrentTimeStr(now.toLocaleTimeString(savedLang === 'ar' ? 'ar-EG' : 'en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: true
       }));
     };
@@ -213,7 +236,6 @@ export default function App() {
       setCurrentTimeStr(now.toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: true
       }));
     };
@@ -337,6 +359,13 @@ export default function App() {
     localStorage.clear();
     window.location.reload();
   };
+
+  // Auto-switch to newly added or active playlist when custom list is detected
+  useEffect(() => {
+    if (playlists.length > 0 && activePlaylistId === 'demo') {
+      setActivePlaylistId(playlists[playlists.length - 1].id);
+    }
+  }, [playlists, activePlaylistId]);
 
   // Load the selected playlist channels (either Demo or parsed M3U)
   useEffect(() => {
@@ -507,7 +536,7 @@ export default function App() {
       }
       video.removeAttribute('src');
     };
-  }, [activePlayback?.streamUrl, activePlayback]);
+  }, [activePlayback?.streamUrl, activePlayback, showFullscreenPlayer]);
 
   // Handle category change with parental PIN protection
   const handleCategoryClick = (categoryName: string) => {
@@ -606,6 +635,78 @@ export default function App() {
 
   const activeTheme = getThemeClasses();
 
+  const getThemeSpecificClasses = (type: 'button' | 'card' | 'activeItem' | 'badge' | 'secondaryButton') => {
+    switch (theme) {
+      case 'elegant': // amber
+        if (type === 'button') {
+          return 'bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/10';
+        } else if (type === 'card') {
+          return 'p-2 bg-amber-600/20 text-amber-400 rounded-xl border border-amber-500/20';
+        } else if (type === 'activeItem') {
+          return 'border-amber-500 bg-amber-500/10 text-amber-400';
+        } else if (type === 'badge') {
+          return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+        } else if (type === 'secondaryButton') {
+          return 'bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 border border-amber-500/20';
+        }
+        break;
+      case 'emerald': // emerald
+        if (type === 'button') {
+          return 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/10';
+        } else if (type === 'card') {
+          return 'p-2 bg-emerald-600/20 text-emerald-400 rounded-xl border border-emerald-500/20';
+        } else if (type === 'activeItem') {
+          return 'border-emerald-500 bg-emerald-500/10 text-emerald-400';
+        } else if (type === 'badge') {
+          return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+        } else if (type === 'secondaryButton') {
+          return 'bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20';
+        }
+        break;
+      case 'crimson': // rose / red
+        if (type === 'button') {
+          return 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10';
+        } else if (type === 'card') {
+          return 'p-2 bg-rose-600/20 text-rose-400 rounded-xl border border-rose-500/20';
+        } else if (type === 'activeItem') {
+          return 'border-rose-500 bg-rose-500/10 text-rose-400';
+        } else if (type === 'badge') {
+          return 'bg-rose-500/10 border-rose-500/20 text-rose-400';
+        } else if (type === 'secondaryButton') {
+          return 'bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20';
+        }
+        break;
+      case 'onyx': // onyx / gray
+        if (type === 'button') {
+          return 'bg-gray-800 hover:bg-gray-700 text-white shadow-lg shadow-gray-800/10';
+        } else if (type === 'card') {
+          return 'p-2 bg-neutral-800 text-white rounded-xl border border-neutral-700';
+        } else if (type === 'activeItem') {
+          return 'border-gray-500 bg-gray-500/10 text-gray-300';
+        } else if (type === 'badge') {
+          return 'bg-gray-800 border-gray-700 text-gray-300';
+        } else if (type === 'secondaryButton') {
+          return 'bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-800';
+        }
+        break;
+      case 'blue':
+      default:
+        if (type === 'button') {
+          return 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/10';
+        } else if (type === 'card') {
+          return 'p-2 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/20';
+        } else if (type === 'activeItem') {
+          return 'border-blue-500 bg-blue-500/10 text-blue-400';
+        } else if (type === 'badge') {
+          return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
+        } else if (type === 'secondaryButton') {
+          return 'bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20';
+        }
+        break;
+    }
+    return '';
+  };
+
   // Filter items (Live, Movies, Series) based on Category, Search query and Favorites
   const getFilteredItems = (): PlaylistItem[] => {
     let typeFilter: PlaylistItemType = 'live';
@@ -644,7 +745,7 @@ export default function App() {
   // Arabic/English Dictionary
   const trans = {
     en: {
-      appName: "FLIX GHOST IPTV",
+      appName: "Ghost Player",
       liveTv: "Live TV Channels",
       movies: "Movies (VOD)",
       series: "TV Series",
@@ -696,7 +797,7 @@ export default function App() {
       deviceStatus: "Active Device Sync Link"
     },
     ar: {
-      appName: "مشغل FLIX GHOST TV",
+      appName: "مشغل Ghost Player",
       liveTv: "البث التلفزيوني المباشر",
       movies: "الأفلام والسينما (VOD)",
       series: "المسلسلات والدراما",
@@ -767,7 +868,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-display">
-                {isAr ? 'فليكس غوست IPTV' : 'FLIX GHOST IPTV'}
+                {isAr ? 'جوشت بلاير' : 'Ghost Player'}
               </h1>
               <span className="text-[10px] text-cyan-500 font-mono tracking-widest uppercase font-bold">
                 {isAr ? 'البوابة الرسمية للبث بلا حدود' : 'STREAM BEYOND LIMITS'}
@@ -783,14 +884,6 @@ export default function App() {
             >
               <span>📺</span>
               <span>{isAr ? 'مشغل الوسائط (تجربة)' : 'Open Media Player (Test)'}</span>
-            </button>
-
-            {/* Language toggle */}
-            <button 
-              onClick={() => changeLanguage(lang === 'ar' ? 'en' : 'ar')}
-              className="px-3 py-2 bg-cyan-600/10 hover:bg-cyan-600/20 text-cyan-400 font-bold rounded-xl border border-cyan-500/20 transition-all uppercase text-xs cursor-pointer"
-            >
-              {lang === 'ar' ? 'EN' : 'العربية'}
             </button>
           </div>
         </header>
@@ -808,8 +901,8 @@ export default function App() {
             </h2>
             <p className="text-gray-400 text-sm md:text-base leading-relaxed">
               {isAr 
-                ? 'تطبيق فليكس غوست هو المشغل الأسرع والأكثر استقراراً لشاشات سامسونج Tizen وإل جي webOS وأجهزة أندرويد. أدخل عنوان الماك الخاص بجهازك بالأسفل لرفع قوائم M3U أو ربط خوادم Xtream Codes فوراً.'
-                : 'FLIX GHOST is the premium software media player for Samsung Tizen, LG WebOS, Android TV and Apple TV. Enter your TV\'s MAC Address below to upload M3U playlists or configure Xtream Code servers instantly.'}
+                ? 'تطبيق جوشت بلاير هو المشغل الأسرع والأكثر استقراراً لشاشات سامسونج Tizen وإل جي webOS وأجهزة أندرويد. أدخل عنوان الماك الخاص بجهازك بالأسفل لرفع قوائم M3U أو ربط خوادم Xtream Codes فوراً.'
+                : 'Ghost Player is the premium software media player for Samsung Tizen, LG WebOS, Android TV and Apple TV. Enter your TV\'s MAC Address below to upload M3U playlists or configure Xtream Code servers instantly.'}
             </p>
           </div>
 
@@ -818,7 +911,7 @@ export default function App() {
             <div className="p-4 bg-gray-950/60 border border-gray-900 rounded-2xl space-y-1.5">
               <span className="text-lg">👻</span>
               <h4 className="text-white font-bold text-xs uppercase tracking-wider">{isAr ? 'تجربة مجانية كاملة' : '30-Day Free Trial'}</h4>
-              <p className="text-gray-500 text-[11px] leading-normal">{isAr ? 'بمجرد كتابة عنوان الماك، ستحصل تلقائياً على 30 يوماً مجاناً لتجربة المشغل بكامل قنواته دون التزام.' : 'Every registered TV or media box instantly receives 30 days of premium media playback free to fully test FLIX GHOST.'}</p>
+              <p className="text-gray-500 text-[11px] leading-normal">{isAr ? 'بمجرد كتابة عنوان الماك، ستحصل تلقائياً على 30 يوماً مجاناً لتجربة المشغل بكامل قنواته دون التزام.' : 'Every registered TV or media box instantly receives 30 days of premium media playback free to fully test Ghost Player.'}</p>
             </div>
             <div className="p-4 bg-gray-950/60 border border-gray-900 rounded-2xl space-y-1.5">
               <span className="text-lg">⚡</span>
@@ -835,8 +928,8 @@ export default function App() {
           {/* Centralized Upload Portal Area */}
           <div className="bg-slate-950/40 rounded-3xl p-2 border border-gray-900/60 shadow-2xl">
             <PortalView
-              deviceMac=""
-              deviceKey=""
+              deviceMac={macAddress}
+              deviceKey={deviceKey}
               lang={lang}
               themeColor={theme}
               onPlaylistsChanged={() => fetchPlaylists(macAddress)}
@@ -849,11 +942,11 @@ export default function App() {
         <footer className="py-8 bg-black/40 border-t border-gray-900/60 text-center space-y-3 shrink-0">
           <p className="text-xs text-gray-500 max-w-2xl mx-auto px-4 leading-normal">
             {isAr 
-              ? 'تنويه قانوني: تطبيق فليكس غوست (FLIX GHOST) هو مشغل وسائط برمجي مخصص لتشغيل ملفات وقوائم المستخدم الخاصة. لا يوفر التطبيق أي قنوات بث أو اشتراكات تلفزيونية بشكل مسبق، ويتحمل العميل المسؤولية الكاملة عن مصادر قنواته.' 
-              : 'Legal Disclaimer: FLIX GHOST is a professional software media player. FLIX GHOST does not supply, broadcast, sell, or host any media playlists or streaming subscriptions. Users must provide their own valid stream URLs.'}
+              ? 'تنويه قانوني: تطبيق جوشت بلاير (Ghost Player) هو مشغل وسائط برمجي مخصص لتشغيل ملفات وقوائم المستخدم الخاصة. لا يوفر التطبيق أي قنوات بث أو اشتراكات تلفزيونية بشكل مسبق، ويتحمل العميل المسؤولية الكاملة عن مصادر قنواته.' 
+              : 'Legal Disclaimer: Ghost Player is a professional software media player. Ghost Player does not supply, broadcast, sell, or host any media playlists or streaming subscriptions. Users must provide their own valid stream URLs.'}
           </p>
           <p className="text-[10px] text-gray-600 font-mono">
-            &copy; {new Date().getFullYear()} FLIX GHOST IPTV Player. All rights reserved.
+            &copy; {new Date().getFullYear()} Ghost Player. All rights reserved.
           </p>
         </footer>
       </div>
@@ -870,7 +963,7 @@ export default function App() {
         <div className="flex items-center gap-4">
           {/* Logo / Brand */}
           <div className="flex items-center gap-2">
-            <div className={`p-2 bg-${activeTheme.colorName === 'onyx' ? 'neutral-800' : `${activeTheme.colorName}-600/20`} text-${activeTheme.colorName === 'onyx' ? 'white' : `${activeTheme.colorName}-400`} rounded-xl border border-${activeTheme.colorName === 'onyx' ? 'neutral-700' : `${activeTheme.colorName}-500/20`}`}>
+            <div className={getThemeSpecificClasses('card')}>
               <Tv className="w-6 h-6" />
             </div>
             <div>
@@ -882,14 +975,14 @@ export default function App() {
           </div>
 
           {/* Active Playlist Switcher dropdown */}
-          <div className="hidden md:flex items-center gap-2 bg-gray-900/60 border border-gray-800 rounded-xl px-3 py-1.5 ml-4">
-            <span className="text-xs text-gray-500">{trans.activePl}</span>
+          <div className="flex items-center gap-1.5 md:gap-2 bg-gray-900/60 border border-gray-800 rounded-xl px-2 py-1.5 md:px-3 md:py-1.5 ml-1 sm:ml-2 md:ml-4 max-w-[130px] sm:max-w-[200px] md:max-w-none truncate shrink">
+            <span className="text-[10px] md:text-xs text-gray-500 hidden sm:inline">{trans.activePl}</span>
             <select 
               value={activePlaylistId} 
               onChange={handlePlaylistChange}
-              className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-[10px] md:text-xs font-bold text-white focus:outline-none cursor-pointer pr-1 max-w-full truncate"
             >
-              <option value="demo" className="bg-slate-950 text-white">⭐ FREE DEMO LIST (قنوات مجانية)</option>
+              <option value="demo" className="bg-slate-950 text-white">⭐ {isAr ? 'عرض مجاني' : 'FREE DEMO LIST'}</option>
               {playlists.map(pl => (
                 <option key={pl.id} value={pl.id} className="bg-slate-950 text-white">📡 {pl.name}</option>
               ))}
@@ -898,10 +991,10 @@ export default function App() {
             <button 
               onClick={handleSyncPlaylists}
               disabled={loadingPlaylists}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-1 text-gray-400 hover:text-white transition-colors shrink-0"
               title={trans.reload}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingPlaylists ? 'animate-spin text-blue-400' : ''}`} />
+              <RefreshCw className={`w-3 h-3 md:w-3.5 md:h-3.5 ${loadingPlaylists ? 'animate-spin text-blue-400' : ''}`} />
             </button>
           </div>
         </div>
@@ -914,17 +1007,10 @@ export default function App() {
           </div>
           
           {/* Real Live Clock */}
-          <div className="bg-gray-900/80 border border-gray-800 px-3 py-1.5 rounded-xl font-bold text-white text-sm tracking-wide">
-            {currentTimeStr}
+          <div className="bg-gray-950/80 border border-cyan-500/30 px-2.5 py-1 rounded-xl font-bold text-cyan-400 text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.15)] select-none">
+            <Clock className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="font-mono tracking-tight">{currentTimeStr}</span>
           </div>
-
-          {/* Direct Lang Toggle */}
-          <button 
-            onClick={() => changeLanguage(lang === 'ar' ? 'en' : 'ar')}
-            className="px-2.5 py-1.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 font-bold rounded-xl border border-blue-500/20 transition-all uppercase"
-          >
-            {lang === 'ar' ? 'EN' : 'العربية'}
-          </button>
         </div>
       </header>
 
@@ -1148,7 +1234,7 @@ export default function App() {
                 <Tv className="w-12 h-12" />
               </div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                {isAr ? 'مرحباً بك في مشغل FLIX GHOST TV' : 'Welcome to FLIX GHOST TV Player'}
+                {isAr ? 'مرحباً بك في مشغل Ghost Player' : 'Welcome to Ghost Player'}
               </h2>
               <p className="text-gray-400 text-sm leading-relaxed max-w-lg mx-auto">
                 {trans.portalInstruction}
@@ -1170,7 +1256,7 @@ export default function App() {
               <div className="flex flex-col sm:flex-row justify-center gap-3 max-w-md mx-auto">
                 <button
                   onClick={loadDemoPlaylist}
-                  className={`flex-1 py-3.5 px-4 bg-${activeTheme.colorName}-600 hover:bg-${activeTheme.colorName}-500 text-${activeTheme.colorName === 'amber' ? 'black' : 'white'} rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2`}
+                  className={`flex-1 ${getThemeSpecificClasses('button')}`}
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>{trans.demoBtn}</span>
@@ -1292,7 +1378,7 @@ export default function App() {
                           }}
                           className={`group p-2 bg-black/40 hover:bg-black/80 border rounded-xl flex items-center gap-3 transition-all cursor-pointer hover:scale-[1.01] ${
                             activePlayback?.item.id === channel.id
-                              ? `border-${activeTheme.colorName}-500 bg-${activeTheme.colorName}-500/10`
+                              ? getThemeSpecificClasses('activeItem')
                               : 'border-gray-900/40 hover:border-gray-800'
                           }`}
                         >
@@ -1335,7 +1421,7 @@ export default function App() {
                           }}
                           className={`group p-2.5 bg-black/20 hover:bg-black/60 border rounded-xl flex items-center gap-3 transition-all cursor-pointer hover:scale-[1.01] ${
                             activePlayback?.item.id === channel.id
-                              ? `border-${activeTheme.colorName}-500 bg-${activeTheme.colorName}-500/10`
+                              ? getThemeSpecificClasses('activeItem')
                               : 'border-gray-900/40 hover:border-gray-800'
                           }`}
                         >
@@ -1378,16 +1464,37 @@ export default function App() {
                   {activePlayback && activePlayback.item.type === 'live' ? (
                     <div className="space-y-4">
                       {/* Interactive HTML5 Video Window */}
-                      <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-gray-800 shadow-2xl">
-                        <video
-                          ref={videoRef}
-                          className="w-full h-full object-contain"
-                          autoPlay
-                          controls={false} // Custom controls below or full screen
-                          muted
-                        />
+                      <div 
+                        onClick={() => setShowFullscreenPlayer(true)}
+                        className="relative aspect-video bg-black rounded-xl overflow-hidden border border-gray-800 shadow-2xl cursor-pointer group"
+                      >
+                        {!showFullscreenPlayer ? (
+                          <video
+                            ref={videoRef}
+                            className="w-full h-full object-contain"
+                            autoPlay
+                            controls={false}
+                            muted={isMuted}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-950 text-gray-500 text-xs gap-2">
+                            <Tv className="w-8 h-8 animate-pulse text-gray-700" />
+                            <span>{isAr ? 'يعمل في الشاشة الكاملة' : 'Streaming in Fullscreen'}</span>
+                          </div>
+                        )}
+                        
+                        {/* Interactive Hover Overlay to signify click-to-fullscreen */}
+                        {!showFullscreenPlayer && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white">
+                            <Maximize className="w-8 h-8 text-white drop-shadow animate-bounce" />
+                            <span className="text-xs font-bold tracking-wide">
+                              {isAr ? 'عرض ملء الشاشة' : 'Click for Fullscreen'}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold font-mono animate-pulse uppercase tracking-wider">
-                          LIVE LIVE
+                          LIVE
                         </div>
                       </div>
 
@@ -1418,19 +1525,39 @@ export default function App() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          const video = videoRef.current;
-                          if (video) {
-                            // We trigger full screen video player mode
-                            // Handled by activePlayback state
-                          }
-                        }}
-                        className={`w-full py-3 px-4 bg-${activeTheme.colorName}-600 hover:bg-${activeTheme.colorName}-500 text-${activeTheme.colorName === 'amber' ? 'black' : 'white'} rounded-xl font-bold text-sm tracking-tight transition-all duration-200 flex items-center justify-center gap-2`}
-                      >
-                        <Volume2 className="w-4 h-4 animate-bounce" />
-                        <span>{trans.play}</span>
-                      </button>
+                      {/* Interactive Mute and Fullscreen Control triggers */}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMuted(prev => !prev);
+                          }}
+                          className="flex-1 py-2.5 px-3 bg-white/5 hover:bg-white/10 border border-gray-900 rounded-xl text-xs font-bold text-gray-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          {isMuted ? (
+                            <>
+                              <VolumeX className="w-4 h-4 text-rose-500" />
+                              <span>{isAr ? 'كتم الصوت' : 'Muted'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="w-4 h-4 text-emerald-500" />
+                              <span>{isAr ? 'الصوت مفعّل' : 'Unmuted'}</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowFullscreenPlayer(true);
+                          }}
+                          className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${getThemeSpecificClasses('secondaryButton')}`}
+                        >
+                          <Maximize className="w-4 h-4" />
+                          <span>{isAr ? 'كامل الشاشة' : 'Fullscreen'}</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-20 text-gray-600 space-y-4">
@@ -1475,30 +1602,41 @@ export default function App() {
               </div>
 
               {/* Movies Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-2.5 sm:gap-3.5">
                 {getFilteredItems().map((movie) => (
                   <div
                     key={movie.id}
                     onClick={() => setSelectedMovie(movie)}
-                    className="group bg-gray-950/80 border border-gray-900/60 rounded-xl overflow-hidden hover:border-blue-500/50 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer shadow-lg"
+                    className="group bg-gray-950/60 border border-gray-900/40 rounded-xl overflow-hidden hover:border-cyan-500/50 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer shadow-lg"
                   >
                     <div className="aspect-[2/3] bg-black relative overflow-hidden flex items-center justify-center">
                       {movie.logo ? (
                         <img src={movie.logo} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                       ) : (
-                        <Film className="w-12 h-12 text-gray-800" />
+                        <Film className="w-10 h-10 text-gray-800" />
                       )}
                       {movie.rating && (
-                        <span className="absolute top-2 left-2 bg-black/80 backdrop-blur-md text-amber-400 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-amber-400/20 font-mono">
+                        <span className="absolute top-1.5 left-1.5 bg-black/85 backdrop-blur-md text-amber-400 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-amber-400/20 font-mono z-30">
                           ⭐ {movie.rating}
                         </span>
                       )}
+                      {movie.url && (
+                        <CardHoverPreview 
+                          url={movie.url} 
+                          isAr={lang === 'ar'} 
+                          onPlayClick={(e) => {
+                            e.stopPropagation();
+                            setActivePlayback({ item: movie, playlistId: activePlaylistId, index: 0, streamUrl: movie.url });
+                            setShowFullscreenPlayer(true);
+                          }}
+                        />
+                      )}
                     </div>
-                    <div className="p-3">
-                      <h4 className="font-bold text-xs truncate text-white">{movie.name}</h4>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-[10px] text-gray-500 font-mono">{movie.releaseDate || 'VOD'}</span>
-                        <span className="text-[10px] text-gray-500 truncate max-w-[80px]">{movie.group}</span>
+                    <div className="p-2 sm:p-2.5">
+                      <h4 className="font-bold text-[11px] sm:text-xs truncate text-white group-hover:text-cyan-400 transition-colors">{movie.name}</h4>
+                      <div className="flex justify-between items-center mt-1 text-[9px] sm:text-[10px]">
+                        <span className="text-gray-500 font-mono">{movie.releaseDate || 'VOD'}</span>
+                        <span className="text-gray-500 truncate max-w-[65px] sm:max-w-[80px]">{movie.group}</span>
                       </div>
                     </div>
                   </div>
@@ -1585,8 +1723,11 @@ export default function App() {
                     {/* Action */}
                     <div className="pt-4 flex flex-wrap gap-3">
                       <button
-                        onClick={() => setActivePlayback({ item: selectedMovie, playlistId: activePlaylistId, index: 0, streamUrl: selectedMovie.url })}
-                        className={`py-3.5 px-8 bg-${activeTheme.colorName}-600 hover:bg-${activeTheme.colorName}-500 text-${activeTheme.colorName === 'amber' ? 'black' : 'white'} rounded-xl font-bold text-sm tracking-tight shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2`}
+                        onClick={() => {
+                          setActivePlayback({ item: selectedMovie, playlistId: activePlaylistId, index: 0, streamUrl: selectedMovie.url });
+                          setShowFullscreenPlayer(true);
+                        }}
+                        className={`py-3.5 px-8 rounded-xl font-bold text-sm tracking-tight shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2 ${getThemeSpecificClasses('button')}`}
                       >
                         <Play className="w-5 h-5 fill-current ml-0.5" />
                         <span>{trans.play}</span>
@@ -1638,30 +1779,59 @@ export default function App() {
               </div>
 
               {/* Series grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-9 gap-2.5 sm:gap-3.5">
                 {getFilteredItems().map((series) => (
                   <div
                     key={series.id}
                     onClick={() => { setSelectedSeries(series); setSelectedSeason(1); }}
-                    className="group bg-gray-950/80 border border-gray-900/60 rounded-xl overflow-hidden hover:border-blue-500/50 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer shadow-lg"
+                    className="group bg-gray-950/60 border border-gray-900/40 rounded-xl overflow-hidden hover:border-cyan-500/50 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer shadow-lg"
                   >
                     <div className="aspect-[2/3] bg-black relative overflow-hidden flex items-center justify-center">
                       {series.logo ? (
                         <img src={series.logo} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
                       ) : (
-                        <Clapperboard className="w-12 h-12 text-gray-800" />
+                        <Clapperboard className="w-10 h-10 text-gray-800" />
                       )}
                       {series.rating && (
-                        <span className="absolute top-2 left-2 bg-black/80 backdrop-blur-md text-amber-400 text-[10px] font-extrabold px-1.5 py-0.5 rounded border border-amber-400/20 font-mono">
+                        <span className="absolute top-1.5 left-1.5 bg-black/85 backdrop-blur-md text-amber-400 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-amber-400/20 font-mono z-30">
                           ⭐ {series.rating}
                         </span>
                       )}
+                      {series.url && (
+                        <CardHoverPreview 
+                          url={series.url} 
+                          isAr={lang === 'ar'} 
+                          onPlayClick={(e) => {
+                            e.stopPropagation();
+                            const episodes = DEMO_EPISODES[series.id] || [];
+                            const firstEp = episodes[0];
+                            if (firstEp) {
+                              setActivePlayback({ 
+                                item: series, 
+                                playlistId: activePlaylistId, 
+                                index: 0, 
+                                streamUrl: firstEp.url, 
+                                seasonNum: firstEp.seasonNum, 
+                                episodeId: firstEp.id 
+                              });
+                            } else {
+                              setActivePlayback({ 
+                                item: series, 
+                                playlistId: activePlaylistId, 
+                                index: 0, 
+                                streamUrl: series.url 
+                              });
+                            }
+                            setShowFullscreenPlayer(true);
+                          }}
+                        />
+                      )}
                     </div>
-                    <div className="p-3">
-                      <h4 className="font-bold text-xs truncate text-white">{series.name}</h4>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-[10px] text-gray-500 font-mono">{series.duration || trans.epCount}</span>
-                        <span className="text-[10px] text-gray-500 truncate max-w-[80px]">{series.group}</span>
+                    <div className="p-2 sm:p-2.5">
+                      <h4 className="font-bold text-[11px] sm:text-xs truncate text-white group-hover:text-cyan-400 transition-colors">{series.name}</h4>
+                      <div className="flex justify-between items-center mt-1 text-[9px] sm:text-[10px]">
+                        <span className="text-gray-500 font-mono">{series.duration || trans.epCount}</span>
+                        <span className="text-gray-500 truncate max-w-[65px] sm:max-w-[80px]">{series.group}</span>
                       </div>
                     </div>
                   </div>
@@ -1725,7 +1895,10 @@ export default function App() {
                   {(DEMO_EPISODES[selectedSeries.id] || []).map((ep) => (
                     <div
                       key={ep.id}
-                      onClick={() => setActivePlayback({ item: selectedSeries, playlistId: activePlaylistId, index: 0, streamUrl: ep.url, seasonNum: ep.seasonNum, episodeId: ep.id })}
+                      onClick={() => {
+                        setActivePlayback({ item: selectedSeries, playlistId: activePlaylistId, index: 0, streamUrl: ep.url, seasonNum: ep.seasonNum, episodeId: ep.id });
+                        setShowFullscreenPlayer(true);
+                      }}
                       className="group bg-black/60 border border-gray-900/60 hover:border-blue-500/30 hover:bg-white/5 p-4 rounded-xl flex gap-4 transition-all duration-200 cursor-pointer"
                     >
                       <div className="w-24 aspect-[16/9] bg-gray-950 rounded-lg overflow-hidden border border-gray-900 flex items-center justify-center shrink-0">
@@ -1913,6 +2086,36 @@ export default function App() {
                     ))}
                   </div>
                 </div>
+
+                {/* Language Selector */}
+                <div className="space-y-2 pt-4 border-t border-gray-900/60">
+                  <label className="text-xs text-gray-400 font-bold block">
+                    {isAr ? 'لغة الواجهة والترجمة' : 'Interface Language & Translation'}
+                  </label>
+                  <div className="flex gap-3">
+                    {[
+                      { id: 'en', label: 'English (EN)' },
+                      { id: 'ar', label: 'العربية (AR)' }
+                    ].map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => changeLanguage(l.id as 'ar' | 'en')}
+                        className={`flex-1 p-3.5 rounded-xl border text-xs font-bold transition-all text-center ${
+                          lang === l.id 
+                            ? getThemeSpecificClasses('badge') 
+                            : 'bg-black/40 border-gray-900 hover:border-gray-800 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic mt-1 leading-normal">
+                    {isAr 
+                      ? '💡 يتم استكشاف وتعيين اللغة الافتراضية للجهاز تلقائياً على المتصفح وأجهزة الـ TV عند أول تشغيل.' 
+                      : '💡 The app language is automatically configured to match your device/browser default settings on first load.'}
+                  </p>
+                </div>
               </div>
 
               {/* Settings block 3: Parental Controls */}
@@ -1997,6 +2200,46 @@ export default function App() {
         {activeTab === 'native_blueprint' && (
           <NativeBlueprintView lang={lang} activeTheme={activeTheme} />
         )}
+      {/* FULLSCREEN OVERLAY PLAYER */}
+      {showFullscreenPlayer && activePlayback && (
+        <div className="fixed inset-0 bg-black z-50 flex flex-col justify-between overflow-hidden">
+          {/* Real video element */}
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain bg-black"
+            autoPlay
+            controls={false}
+          />
+          
+          <PlayerControls
+            videoRef={videoRef}
+            item={activePlayback.item}
+            onClose={() => {
+              setShowFullscreenPlayer(false);
+              // For movies/series, clear activePlayback so that the stream is fully closed
+              if (activePlayback.item.type !== 'live') {
+                setActivePlayback(null);
+              }
+            }}
+            lang={lang}
+            themeColor={theme}
+            allChannelsInGroup={
+              activePlayback.item.type === 'live'
+                ? allItems.filter(item => item.type === 'live' && item.group === activePlayback.item.group)
+                : []
+            }
+            onChannelSelect={(channel) => {
+              setActivePlayback({
+                item: channel,
+                playlistId: activePlaylistId,
+                index: 0,
+                streamUrl: channel.url
+              });
+            }}
+          />
+        </div>
+      )}
+
               {/* PARENTAL CONTROL SECURITY PIN DIALOG POPUP */}
       {pinPromptOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">

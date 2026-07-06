@@ -43,7 +43,7 @@ export const DEMO_CHANNELS: PlaylistItem[] = [
     id: "demo-live-5",
     name: "Al Jazeera English",
     logo: "https://upload.wikimedia.org/wikipedia/en/2/22/Al_Jazeera_English_logo.svg",
-    url: "https://live-amg-el.akamaized.net/aljazeera/index.m3u8",
+    url: "https://live-lh.aljazeera.net/i/aljazeera_en@124016/master.m3u8",
     group: "News & Events (الأخبار)",
     type: "live"
   },

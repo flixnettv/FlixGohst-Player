@@ -531,17 +531,30 @@ app.get("/api/proxy/stream", async (req, res) => {
 
       if (response.body) {
         const reader = (response.body as any).getReader();
+        let clientClosed = false;
         
         req.on('close', () => {
+          clientClosed = true;
           reader.cancel().catch(() => {});
         });
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (clientClosed) break;
+            res.write(value);
+          }
+          res.end();
+        } catch (readErr: any) {
+          // If the connection was closed by the client or connection aborted, this is expected.
+          // We log a quiet message instead of triggering a system error.
+          console.log(`[Proxy] Stream playback stopped: ${readErr.message || "Connection terminated by client"}`);
+        } finally {
+          try {
+            reader.releaseLock();
+          } catch (e) {}
         }
-        res.end();
       } else {
         res.status(500).send("No stream body received");
       }

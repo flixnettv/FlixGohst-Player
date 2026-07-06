@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flix Ghost Player</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050507;
+            color: #ffffff;
+            font-family: 'Cairo', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .splash-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo-glow {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 40px rgba(29, 78, 216, 0.4);
+            animation: pulse 2s infinite ease-in-out;
+        }
+        .logo-icon {
+            color: #ffffff;
+            font-size: 40px;
+            font-weight: bold;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 5px 0 0 0;
+        }
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+            margin-top: 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(29, 78, 216, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(29, 78, 216, 0.6); }
+        }
+    </style>
+    <!-- تضمين مكتبات التلفزيون الذكي الأساسية لتسريع التفاعل فور إعادة التوجيه -->
+    <script type="text/javascript" src="$WEBOS_COMMON_BOOTSTRAP_PATH$/webOSTVjs-1.2.4/webOSTV.js"></script>
+</head>
+<body>
+    <div class="splash-container">
+        <div class="logo-glow">
+            <span class="logo-icon">📡</span>
+        </div>
+        <div>
+            <h1 class="title">Flix Ghost Player</h1>
+            <p class="subtitle">جاري الاتصال بالخادم السحابي...</p>
+        </div>
+        <div class="loader"></div>
+    </div>
+
+    <script type="text/javascript">
+        // عنوان الخادم البعيد المستضيف للتطبيق
+        var REMOTE_URL = "https://fgtv.qzz.io";
+
+        // وظيفة التوجيه الآمن والذكي للفيديو والتحكم
+        function redirectToHostedApp() {
+            try {
+                // حفظ الماك إدريس في الكوكيز أو التخزين المحلي لتسهيل استرجاعه إذا لزم الأمر
+                if (typeof window.webOS !== 'undefined' && window.webOS.deviceInfo) {
+                    window.webOS.deviceInfo(function(device) {
+                        if (device && device.duid) {
+                            localStorage.setItem('flixnet_tv_duid', device.duid);
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error("Error fetching webOS device info:", e);
+            }
+
+            // التوجيه الفوري باستخدام window.location.replace لمنع العودة للخلف بالخطأ عند الضغط على زر Back
+            setTimeout(function() {
+                window.location.replace(REMOTE_URL);
+            }, 1000);
+        }
+
+        // تشغيل التوجيه عند تحميل المستند
+        window.onload = function() {
+            redirectToHostedApp();
+        };
+    </script>
+</body>
+</html>

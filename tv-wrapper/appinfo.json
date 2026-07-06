@@ -1,0 +1,24 @@
+{
+  "id": "com.flixnettv.ghostplayer",
+  "version": "1.0.0",
+  "vendor": "FlixNetTV",
+  "type": "web",
+  "main": "index.html",
+  "title": "Flix Ghost Player",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "width": 1920,
+  "height": 1080,
+  "resolution": "1920x1080",
+  "transparent": true,
+  "iconColor": "#050507",
+  "requiredPermissions": [
+    "internet",
+    "audio.output",
+    "network.query"
+  ],
+  "accessibility": {
+    "supportsAudioGuidance": false
+  },
+  "appDescription": "Flix Ghost Player - Standalone IPTV, M3U and Xtream Codes API Media Player for Smart TVs."
+}
