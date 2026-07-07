@@ -1,0 +1,34 @@
+{
+  "id": "com.flixnettv.ghostplayer",
+  "version": "1.0.0",
+  "type": "web",
+  "title": "Flix Ghost Player",
+  "main": "index.html",
+  "icon": "icon.png",
+  "largeIcon": "color.png",
+  "resolution": "1920x1080",
+  "resolutionIndependent": false,
+  "supportPortraitMode": false,
+  "checkUpdateOnLaunch": false,
+  "bgColor": "#0a0a0f",
+  "disableBackHistoryAPI": true,
+  "handlesRelaunch": false,
+  "splashBackground": "#000000",
+"splashImage": "splash.png",
+  "vendor": "FlixNet TV",
+  "appDescription": "مشغل البث المباشر والفيديو عند الطلب",
+  "requiredPermissions": [
+    "LAUNCH",
+    "APP_TO_APP",
+    "NETWORK",
+    "VIDEO",
+    "AUDIO"
+  ],
+  "permissions": [
+    "https://fgtv.qzz.io",
+    "*://*.qzz.io",
+    "*://*.m3u8",
+    "*://*.mp4",
+    "*://*.ts"
+  ]
+}

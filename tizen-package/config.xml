@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="http://flixnettv.com/ghostplayer"
+        version="1.0.0"
+        viewmodes="fullscreen">
+  <tizen:application id="com.flixnettv.ghostplayer"
+                     package="com.flixnettv"
+                     required_version="2.3"/>
+  <content src="index.html"/>
+  <name>Flix Ghost Player</name>
+  <tizen:display_name>Flix Ghost Player</tizen:display_name>
+  <icon src="icon.png"/>
+  <description>مشغل البث المباشر والفيديو عند الطلب</description>
+  <author>FlixNet TV</author>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.window"/>
+  <access origin="*" subdomains="true"/>
+  <tizen:profile name="tv-samsung-6.x"/>
+  <tizen:setting screen-orientation="landscape"
+                 context-menu="enable"
+                 background-support="disable"
+                 encryption="disable"
+                 install-location="internal-only"
+                 hwkey-event="enable"/>
+</widget>
