@@ -1,7 +1,7 @@
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const targetUrl = 'http://65.75.200.19:3001' + url.pathname + url.search;
+  const targetUrl = 'http://65.75.200.19:3002' + url.pathname + url.search;
 
   const headers = new Headers(request.headers);
   headers.set('X-Forwarded-Host', url.hostname);
