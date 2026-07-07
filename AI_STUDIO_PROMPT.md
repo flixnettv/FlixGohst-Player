@@ -84,3 +84,20 @@ setError(errorData.error || errorData.message || dict.generalError);
 - Root directory: `/`
 - Functions directory: `functions/` (افتراضي)
 - Compatibility date: `2026-07-06`
+
+### 8. Stream Proxy — لازم يتبع redirects
+
+في `/root/flix-central-v1/ghost-api-backend/server.ts`، دالة `/api/proxy/stream`:
+
+```typescript
+const response = await fetch(streamUrl, {
+  redirect: "follow",  // ← هذا مهم! روابط البث ترجع 302 redirect لـ CDN
+  headers: { ... }
+});
+```
+
+**⚠️ بدون `redirect: "follow"`، البث لا يعمل لأن روابط .ts ترجع 302 لسيرفر آخر.**
+
+### 9. رابط الاختبار
+
+M3U تجريبي: `http://dbaba.pro:80/get.php?username=264644000695&password=558266708762&type=m3u_plus&output=ts`
