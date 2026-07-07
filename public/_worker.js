@@ -6,7 +6,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Route /api/* to the VPS backend
     if (url.pathname.startsWith('/api/')) {
       const targetUrl = `${BACKEND}${url.pathname}${url.search}`;
       const headers = new Headers(request.headers);
@@ -14,10 +13,7 @@ export default {
       headers.set('X-Forwarded-Proto', url.protocol);
       headers.set('X-Real-IP', request.headers.get('CF-Connecting-IP') || '');
 
-      const init = {
-        method: request.method,
-        headers,
-      };
+      const init = { method: request.method, headers };
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         init.body = request.body;
       }
@@ -41,11 +37,6 @@ export default {
       }
     }
 
-    // Serve static assets from Cloudflare Pages
-    try {
-      return await env.ASSETS.fetch(request);
-    } catch (e) {
-      return new Response('Not Found', { status: 404 });
-    }
+    return env.ASSETS.fetch(request);
   },
 };
