@@ -1,18 +1,20 @@
 export async function onRequest(context) {
   const targets = [
-    'http://65.75.200.19:3002/api/device/status?mac=00:11:22:33:44:55',
-    'http://65.75.200.19:3002',
-    'http://65.75.200.19:3001',
+    { label: 'HTTPS ghost-api', url: 'https://65.75.200.19:3002/api/device/status?mac=00:11:22:33:44:55' },
+    { label: 'HTTP ghost-api', url: 'http://65.75.200.19:3002/api/device/status?mac=00:11:22:33:44:55' },
+    { label: 'HTTPS example.com', url: 'https://example.com' },
+    { label: 'HTTP example.com', url: 'http://example.com' },
   ];
   const results = [];
-  for (const target of targets) {
+  for (const t of targets) {
     try {
       const start = Date.now();
-      const resp = await fetch(target, { signal: AbortSignal.timeout(5000) });
+      const resp = await fetch(t.url, { signal: AbortSignal.timeout(5000) });
       const elapsed = Date.now() - start;
-      results.push({ target, status: resp.status, ok: resp.ok, elapsed: elapsed + 'ms' });
+      const text = await resp.text();
+      results.push({ label: t.label, status: resp.status, elapsed: elapsed + 'ms', body: text.slice(0, 100) });
     } catch (err) {
-      results.push({ target, error: err.name + ': ' + err.message });
+      results.push({ label: t.label, error: err.name + ': ' + err.message });
     }
   }
   return new Response(JSON.stringify(results, null, 2), {
