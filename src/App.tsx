@@ -131,6 +131,11 @@ export default function App() {
     return true;
   });
 
+  // Stream connection proxy mode ('always', 'auto', 'direct')
+  const [proxyMode, setProxyMode] = useState<'always' | 'auto' | 'direct'>(() => {
+    return (localStorage.getItem('flixnet_proxy_mode') as 'always' | 'auto' | 'direct') || 'auto';
+  });
+
   const toggleDeviceMode = (val: boolean) => {
     setIsDeviceMode(val);
     localStorage.setItem('flixnet_device_mode', val ? 'true' : 'false');
@@ -463,9 +468,17 @@ export default function App() {
     
     // Resolve external URLs to our stream proxy to bypass CORS/Mixed-Content blocks
     let playUrl = originalUrl;
-    console.log(`[Playback] Original URL: ${originalUrl}`);
-    if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
-      playUrl = `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+    console.log(`[Playback] Original URL: ${originalUrl}, Proxy Mode: ${proxyMode}`);
+    if (proxyMode === 'always') {
+      if (originalUrl.startsWith('http://') || originalUrl.startsWith('https://')) {
+        playUrl = `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+      }
+    } else if (proxyMode === 'auto') {
+      // Only proxy HTTP links because HTTPS links are safe from Mixed-Content blocks 
+      // and streaming them directly avoids server datacenter IP bans / CDN blocking (403 errors).
+      if (originalUrl.startsWith('http://')) {
+        playUrl = `/api/proxy/stream?url=${encodeURIComponent(originalUrl)}`;
+      }
     }
     console.log(`[Playback] Resolved Play URL: ${playUrl}`);
 
@@ -535,7 +548,7 @@ export default function App() {
       }
       video.removeAttribute('src');
     };
-  }, [activePlayback?.streamUrl, activePlayback, showFullscreenPlayer]);
+  }, [activePlayback?.streamUrl, activePlayback, showFullscreenPlayer, proxyMode]);
 
   // Handle category change with parental PIN protection
   const handleCategoryClick = (categoryName: string) => {
@@ -862,8 +875,13 @@ export default function App() {
         {/* Web Portal Header */}
         <header className="px-6 py-4 bg-black/60 border-b border-gray-900/60 flex items-center justify-between z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-1 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
-              <FlixGhostIcon className="w-8 h-8 drop-shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
+            <div className="p-1 bg-cyan-500/10 rounded-xl border border-cyan-500/20 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Flix Ghost" 
+                className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.45)]"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-display">
@@ -962,8 +980,13 @@ export default function App() {
         <div className="flex items-center gap-4">
           {/* Logo / Brand */}
           <div className="flex items-center gap-2">
-            <div className={getThemeSpecificClasses('card')}>
-              <Tv className="w-6 h-6" />
+            <div className="p-1.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Flix Ghost" 
+                className="w-6 h-6 object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.45)]"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <h1 className={`text-xl font-black tracking-tighter ${activeTheme.glowClass}`}>
@@ -2119,6 +2142,54 @@ export default function App() {
                     {isAr 
                       ? '💡 اختر "مشغل ويب متكامل" لتشغيل ومشاهدة قنواتك مباشرة من المتصفح، أو اختر "موقع البوابة" لإدارة قنوات أجهزة تلفاز ذكية أخرى.' 
                       : '💡 Choose "Web Media Player" to play channels directly in your browser, or "Standalone Portal" to load channels for other external smart TVs.'}
+                  </p>
+                </div>
+
+                {/* Connection Stream Proxy Selector */}
+                <div className="space-y-2 pt-4 border-t border-gray-900/60">
+                  <label className="text-xs text-gray-400 font-bold block flex items-center gap-1.5">
+                    <span>📡</span>
+                    <span>{isAr ? 'خادم البث الوسيط (البروكسي)' : 'Stream Connection Proxy'}</span>
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {[
+                      { 
+                        id: 'auto', 
+                        title: isAr ? 'تلقائي (موصى به)' : 'Auto Proxy', 
+                        desc: isAr ? 'تشغيل قنوات HTTPS مباشرة، وبروكسي لروابط HTTP لتجاوز حظر المتصفح' : 'HTTPS streams directly, proxies HTTP to bypass Mixed Content restrictions'
+                      },
+                      { 
+                        id: 'always', 
+                        title: isAr ? 'تشغيل عبر السيرفر دائماً' : 'Always Proxy', 
+                        desc: isAr ? 'تمرير كل البث عبر السيرفر لحل مشاكل جدار الحماية (CORS)' : 'Proxies all streams through app server to bypass strict connection blocks'
+                      },
+                      { 
+                        id: 'direct', 
+                        title: isAr ? 'بث مباشر بالكامل' : 'Always Direct', 
+                        desc: isAr ? 'تشغيل جميع القنوات مباشرة دون وساطة السيرفر للسرعة القصوى وثبات IP' : 'Streams all links directly. Maximum speed and respects geo-locked playlists'
+                      }
+                    ].map((modeOption) => (
+                      <button
+                        key={modeOption.id}
+                        onClick={() => { setProxyMode(modeOption.id as any); localStorage.setItem('flixnet_proxy_mode', modeOption.id); }}
+                        className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1 ${
+                          proxyMode === modeOption.id 
+                            ? 'bg-blue-600/10 border-blue-500/40 text-blue-400 shadow-md'
+                            : 'bg-black/40 border-gray-900 hover:border-gray-800 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-bold text-xs">
+                          <span className={`w-2 h-2 rounded-full ${proxyMode === modeOption.id ? 'bg-blue-400' : 'bg-gray-600'}`} />
+                          <span>{modeOption.title}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500 leading-snug">{modeOption.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-yellow-500/90 italic mt-1 leading-normal">
+                    {isAr 
+                      ? '⚠️ تنبيه: العديد من مزودي القنوات يمنعون تشغيل القنوات عبر سيرفرات مراكز البيانات (تظهر كشاشة سوداء أو خطأ 403). إذا كانت قنواتك لا تعمل، يرجى تفعيل وضع "تلقائي (موصى به)" أو "بث مباشر بالكامل".' 
+                      : '⚠️ Notice: Many IPTV providers block requests from datacenter servers (resulting in a black screen or 403 error). If your channels are not playing, try switching to "Auto Proxy" or "Always Direct" mode.'}
                   </p>
                 </div>
               </div>

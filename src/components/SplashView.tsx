@@ -72,9 +72,14 @@ export default function SplashView({ lang }: SplashViewProps) {
           className="relative animate-float"
         >
           {/* Backlight pulsing glow */}
-          <div className="absolute inset-0 bg-cyan-500/10 blur-3xl rounded-full scale-110" />
+          <div className="absolute inset-0 bg-cyan-500/20 blur-3xl rounded-full scale-110" />
           
-          <FlixGhostIcon className="w-48 h-48 drop-shadow-[0_0_25px_rgba(34,211,238,0.4)]" />
+          <img 
+            src="/logo.png" 
+            alt="Flix Ghost Logo" 
+            className="w-48 h-48 object-contain drop-shadow-[0_0_25px_rgba(34,211,238,0.5)]"
+            referrerPolicy="no-referrer"
+          />
         </motion.div>
 
         {/* Brand Name Title */}
