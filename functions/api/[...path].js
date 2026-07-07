@@ -1,15 +1,11 @@
-// Cloudflare Pages Function — Proxies /api/* to backend
-// Auto-deployed with Pages, no separate Worker needed
+// Cloudflare Pages Function — Proxy /api/* to VPS backend (65.75.200.19:3001)
 
 const BACKEND = 'http://65.75.200.19:3001';
 
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const path = url.pathname;
-  const search = url.search;
-
-  const targetUrl = `${BACKEND}${path}${search}`;
+  const targetUrl = `${BACKEND}${url.pathname}${url.search}`;
 
   const headers = new Headers(request.headers);
   headers.set('X-Forwarded-Host', url.hostname);
