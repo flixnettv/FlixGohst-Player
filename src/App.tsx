@@ -25,7 +25,6 @@ import DisclaimerView from './components/DisclaimerView';
 import FlixGhostIcon from './components/FlixGhostIcon';
 import SplashView from './components/SplashView';
 import SmartCleanupPanel from './components/SmartCleanupPanel';
-import NativeBlueprintView from './components/NativeBlueprintView';
 import CardHoverPreview from './components/CardHoverPreview';
 import Hls from 'hls.js';
 
@@ -38,7 +37,7 @@ export default function App() {
   
   // App UI State
   const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState<'live' | 'movies' | 'series' | 'portal' | 'settings' | 'disclaimer' | 'native_blueprint'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'movies' | 'series' | 'portal' | 'settings' | 'disclaimer'>('live');
   const [lang, setLang] = useState<'ar' | 'en'>(() => {
     const saved = localStorage.getItem('flixnet_lang');
     if (saved === 'ar' || saved === 'en') return saved;
@@ -122,18 +121,14 @@ export default function App() {
   // Mode Check (Device / Smart TV player vs General Website Portal)
   const [isDeviceMode, setIsDeviceMode] = useState<boolean>(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const hasDeviceParam = urlParams.get('mode') === 'device' || urlParams.get('device') === 'true';
+    const hasPortalParam = urlParams.get('mode') === 'portal' || urlParams.get('portal') === 'true';
     const savedMode = localStorage.getItem('flixnet_device_mode');
     
-    if (hasDeviceParam) return true;
-    if (savedMode === 'true') return true;
+    // Default to true (Web Media Player mode) unless mode=portal is explicitly requested
+    if (hasPortalParam) return false;
+    if (savedMode === 'false') return false;
     
-    // Auto-detect TV OS
-    const ua = navigator.userAgent.toLowerCase();
-    if (ua.includes('tizen') || ua.includes('webos') || ua.includes('smarttv') || ua.includes('googletv') || ua.includes('appletv') || ua.includes('hbbtv')) {
-      return true;
-    }
-    return false;
+    return true;
   });
 
   const toggleDeviceMode = (val: boolean) => {
@@ -141,10 +136,10 @@ export default function App() {
     localStorage.setItem('flixnet_device_mode', val ? 'true' : 'false');
     const url = new URL(window.location.href);
     if (val) {
-      url.searchParams.set('mode', 'device');
-    } else {
       url.searchParams.delete('mode');
       url.searchParams.delete('device');
+    } else {
+      url.searchParams.set('mode', 'portal');
     }
     window.history.pushState({}, '', url.toString());
   };
@@ -365,6 +360,9 @@ export default function App() {
   useEffect(() => {
     if (playlists.length > 0 && activePlaylistId === 'demo') {
       setActivePlaylistId(playlists[playlists.length - 1].id);
+    } else if (playlists.length === 0 && activePlaylistId !== 'demo') {
+      setActivePlaylistId('demo');
+      setAllItems([]);
     }
   }, [playlists, activePlaylistId]);
 
@@ -976,28 +974,29 @@ export default function App() {
           </div>
 
           {/* Active Playlist Switcher dropdown */}
-          <div className="flex items-center gap-1.5 md:gap-2 bg-gray-900/60 border border-gray-800 rounded-xl px-2 py-1.5 md:px-3 md:py-1.5 ml-1 sm:ml-2 md:ml-4 max-w-[130px] sm:max-w-[200px] md:max-w-none truncate shrink">
-            <span className="text-[10px] md:text-xs text-gray-500 hidden sm:inline">{trans.activePl}</span>
-            <select 
-              value={activePlaylistId} 
-              onChange={handlePlaylistChange}
-              className="bg-transparent text-[10px] md:text-xs font-bold text-white focus:outline-none cursor-pointer pr-1 max-w-full truncate"
-            >
-              <option value="demo" className="bg-slate-950 text-white">⭐ {isAr ? 'عرض مجاني' : 'FREE DEMO LIST'}</option>
-              {playlists.map(pl => (
-                <option key={pl.id} value={pl.id} className="bg-slate-950 text-white">📡 {pl.name}</option>
-              ))}
-            </select>
-            
-            <button 
-              onClick={handleSyncPlaylists}
-              disabled={loadingPlaylists}
-              className="p-1 text-gray-400 hover:text-white transition-colors shrink-0"
-              title={trans.reload}
-            >
-              <RefreshCw className={`w-3 h-3 md:w-3.5 md:h-3.5 ${loadingPlaylists ? 'animate-spin text-blue-400' : ''}`} />
-            </button>
-          </div>
+          {playlists.length > 0 && (
+            <div className="flex items-center gap-1.5 md:gap-2 bg-gray-900/60 border border-gray-800 rounded-xl px-2 py-1.5 md:px-3 md:py-1.5 ml-1 sm:ml-2 md:ml-4 max-w-[130px] sm:max-w-[200px] md:max-w-none truncate shrink">
+              <span className="text-[10px] md:text-xs text-gray-500 hidden sm:inline">{trans.activePl}</span>
+              <select 
+                value={activePlaylistId} 
+                onChange={handlePlaylistChange}
+                className="bg-transparent text-[10px] md:text-xs font-bold text-white focus:outline-none cursor-pointer pr-1 max-w-full truncate"
+              >
+                {playlists.map(pl => (
+                  <option key={pl.id} value={pl.id} className="bg-slate-950 text-white">📡 {pl.name}</option>
+                ))}
+              </select>
+              
+              <button 
+                onClick={handleSyncPlaylists}
+                disabled={loadingPlaylists}
+                className="p-1 text-gray-400 hover:text-white transition-colors shrink-0"
+                title={trans.reload}
+              >
+                <RefreshCw className={`w-3 h-3 md:w-3.5 md:h-3.5 ${loadingPlaylists ? 'animate-spin text-blue-400' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Info blocks */}
@@ -1080,18 +1079,6 @@ export default function App() {
             >
               <Settings className="w-5 h-5 shrink-0" />
               <span className="hidden md:inline font-bold text-sm">{trans.settings}</span>
-            </button>
-
-            <button
-              onClick={() => { setActiveTab('native_blueprint'); setSelectedMovie(null); setSelectedSeries(null); }}
-              className={`w-full p-3 md:px-4 md:py-3.5 rounded-xl flex items-center gap-3 transition-all duration-200 ${
-                activeTab === 'native_blueprint' 
-                  ? `${activeTheme.bgActive} text-white shadow-lg` 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Cpu className="w-5 h-5 shrink-0" />
-              <span className="hidden md:inline font-bold text-sm">{trans.smartTvPlan}</span>
             </button>
           </div>
 
@@ -1254,20 +1241,12 @@ export default function App() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row justify-center gap-3 max-w-md mx-auto">
-                <button
-                  onClick={loadDemoPlaylist}
-                  className={`flex-1 ${getThemeSpecificClasses('button')}`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{trans.demoBtn}</span>
-                </button>
-
+              <div className="flex justify-center max-w-sm mx-auto">
                 <button
                   onClick={() => setActiveTab('portal')}
-                  className="flex-1 py-3.5 px-4 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-800 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2"
+                  className={`w-full ${getThemeSpecificClasses('button')} py-3.5 px-6 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2`}
                 >
-                  <Globe className="w-4 h-4" />
+                  <Globe className="w-4.5 h-4.5" />
                   <span>{trans.portalBtn}</span>
                 </button>
               </div>
@@ -2036,17 +2015,6 @@ export default function App() {
                       🚀 {isAr ? 'تجديد مجاني تجريبي لعام كامل' : 'Simulate 1 Year Free'}
                     </button>
                   </div>
-
-                  {/* Link to Blueprint */}
-                  <div className="pt-2 border-t border-gray-900/60 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">{isAr ? 'مخطط الـ Flutter والتراخيص:' : 'Flutter TV & License Blueprints:'}</span>
-                    <button
-                      onClick={() => setActiveTab('native_blueprint')}
-                      className="text-xs text-blue-400 hover:underline font-bold flex items-center gap-1"
-                    >
-                      <span>{isAr ? 'عرض لوحة المخططات 📺' : 'View Blueprints Hub 📺'}</span>
-                    </button>
-                  </div>
                 </div>
 
                 <div className="p-3 bg-blue-600/10 border border-blue-500/20 rounded-xl text-[11px] text-blue-400 text-center leading-relaxed">
@@ -2115,6 +2083,42 @@ export default function App() {
                     {isAr 
                       ? '💡 يتم استكشاف وتعيين اللغة الافتراضية للجهاز تلقائياً على المتصفح وأجهزة الـ TV عند أول تشغيل.' 
                       : '💡 The app language is automatically configured to match your device/browser default settings on first load.'}
+                  </p>
+                </div>
+
+                {/* App View Mode Selector */}
+                <div className="space-y-2 pt-4 border-t border-gray-900/60">
+                  <label className="text-xs text-gray-400 font-bold block">
+                    {isAr ? 'وضع عرض التطبيق والتشغيل' : 'Application View & Presentation Mode'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => toggleDeviceMode(true)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        isDeviceMode 
+                          ? 'bg-blue-600/10 border-blue-500/40 text-blue-400 shadow-md'
+                          : 'bg-black/40 border-gray-900 hover:border-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <span className="text-base">📺</span>
+                      <span>{isAr ? 'مشغل ويب متكامل (تطبيق المتصفح)' : 'Web Media Player (Full App)'}</span>
+                    </button>
+                    <button
+                      onClick={() => toggleDeviceMode(false)}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        !isDeviceMode 
+                          ? 'bg-blue-600/10 border-blue-500/40 text-blue-400 shadow-md'
+                          : 'bg-black/40 border-gray-900 hover:border-gray-800 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <span className="text-base">🌐</span>
+                      <span>{isAr ? 'موقع بوابة الرفع (التحكم عن بعد)' : 'Standalone Portal Website'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic mt-1 leading-normal">
+                    {isAr 
+                      ? '💡 اختر "مشغل ويب متكامل" لتشغيل ومشاهدة قنواتك مباشرة من المتصفح، أو اختر "موقع البوابة" لإدارة قنوات أجهزة تلفاز ذكية أخرى.' 
+                      : '💡 Choose "Web Media Player" to play channels directly in your browser, or "Standalone Portal" to load channels for other external smart TVs.'}
                   </p>
                 </div>
               </div>
@@ -2196,10 +2200,6 @@ export default function App() {
               )}
             </div>
           </div>
-        )}
-
-        {activeTab === 'native_blueprint' && (
-          <NativeBlueprintView lang={lang} activeTheme={activeTheme} />
         )}
       {/* FULLSCREEN OVERLAY PLAYER */}
       {showFullscreenPlayer && activePlayback && (

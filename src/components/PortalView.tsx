@@ -414,14 +414,6 @@ export default function PortalView({
     }
   };
 
-  const triggerAppLoadDemo = async () => {
-    // If the user wants to test adding a demo playlist immediately
-    setFormType('m3u');
-    setFormName('FLIX GHOST Demo List');
-    setFormUrl('https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us.m3u'); // Standard public legal stream M3U
-    setShowAddForm(true);
-  };
-
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 font-sans" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Upper Logo & Title Banner */}
@@ -805,12 +797,6 @@ export default function PortalView({
             {playlists.length === 0 ? (
               <div className="text-center py-8 space-y-4">
                 <p className="text-gray-500 text-sm">{dict.noPlaylists}</p>
-                <button 
-                  onClick={triggerAppLoadDemo}
-                  className="text-xs text-blue-500 hover:underline"
-                >
-                  {isAr ? '💡 أتريد تجربة قائمة ديمو مجانية للفحص الفوري للتطبيق؟' : '💡 Load a public IPTV demo list to verify player functions?'}
-                </button>
               </div>
             ) : (
               <div className="space-y-3">
