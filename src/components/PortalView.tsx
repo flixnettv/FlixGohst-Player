@@ -9,6 +9,7 @@ import {
   Tv, Server, ArrowRight, ShieldCheck, RefreshCw, KeyRound, ListMusic, LogOut, Loader2
 } from 'lucide-react';
 import { Playlist, PlaylistType } from '../types';
+import { getApiUrl } from '../utils/api';
 
 interface PortalViewProps {
   deviceMac: string;
@@ -160,14 +161,14 @@ export default function PortalView({
         setLoading(true);
         setError('');
         try {
-          const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(deviceMac)}`);
+          const response = await fetch(getApiUrl(`/api/playlist/get?mac=${encodeURIComponent(deviceMac)}`));
           if (response.ok) {
             const data = await response.json();
             setPlaylists(data.playlists || []);
             setIsLoggedIn(true);
             
             // Also load device subscription status in portal
-            const resSub = await fetch(`/api/device/status?mac=${encodeURIComponent(deviceMac)}&key=${encodeURIComponent(deviceKey)}`);
+            const resSub = await fetch(getApiUrl(`/api/device/status?mac=${encodeURIComponent(deviceMac)}&key=${encodeURIComponent(deviceKey)}`));
             if (resSub.ok) {
               const subData = await resSub.json();
               setDeviceSub({
@@ -199,7 +200,7 @@ export default function PortalView({
     setSuccess('');
 
     try {
-      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`);
+      const response = await fetch(getApiUrl(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`));
       const data = await response.json();
       if (response.ok) {
         setPlaylists(data.playlists || []);
@@ -219,7 +220,7 @@ export default function PortalView({
 
   const loadPlaylists = async () => {
     try {
-      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`);
+      const response = await fetch(getApiUrl(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`));
       if (response.ok) {
         const data = await response.json();
         setPlaylists(data.playlists || []);
@@ -266,7 +267,7 @@ export default function PortalView({
     }
 
     try {
-      const response = await fetch('/api/playlist/save', {
+      const response = await fetch(getApiUrl('/api/playlist/save'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -306,7 +307,7 @@ export default function PortalView({
     setSuccess('');
 
     try {
-      const response = await fetch('/api/playlist/delete', {
+      const response = await fetch(getApiUrl('/api/playlist/delete'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: macInput, playlistId: id })
@@ -341,7 +342,7 @@ export default function PortalView({
   // Fetch device activation status in portal context
   const fetchPortalDeviceStatus = async () => {
     try {
-      const res = await fetch(`/api/device/status?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`);
+      const res = await fetch(getApiUrl(`/api/device/status?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`));
       if (res.ok) {
         const data = await res.json();
         setDeviceSub({
@@ -366,7 +367,7 @@ export default function PortalView({
     setPortalSubError('');
     setPortalSubSuccess('');
     try {
-      const res = await fetch('/api/device/activate', {
+      const res = await fetch(getApiUrl('/api/device/activate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: macInput, key: keyInput, code: portalCodeInput })
@@ -393,7 +394,7 @@ export default function PortalView({
     setPortalSubError('');
     setPortalSubSuccess('');
     try {
-      const res = await fetch('/api/device/activate', {
+      const res = await fetch(getApiUrl('/api/device/activate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: macInput, key: keyInput, action: 'simulate_payment' })

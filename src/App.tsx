@@ -18,6 +18,7 @@ import {
 } from './types';
 import { parseM3U } from './utils/m3uParser';
 import { DEMO_CHANNELS, DEMO_EPISODES } from './utils/demoData';
+import { getApiUrl } from './utils/api';
 import PlayerControls from './components/PlayerControls';
 import PortalView from './components/PortalView';
 import DisclaimerView from './components/DisclaimerView';
@@ -247,7 +248,7 @@ export default function App() {
     setLoadingPlaylists(true);
     setSyncStatus('syncing');
     try {
-      const res = await fetch(`/api/playlist/get?mac=${encodeURIComponent(mac)}`);
+      const res = await fetch(getApiUrl(`/api/playlist/get?mac=${encodeURIComponent(mac)}`));
       if (res.ok) {
         const data = await res.json();
         setPlaylists(data.playlists || []);
@@ -266,7 +267,7 @@ export default function App() {
   // Fetch device activation status from server
   const fetchDeviceStatus = async (mac: string, key: string) => {
     try {
-      const res = await fetch(`/api/device/status?mac=${encodeURIComponent(mac)}&key=${encodeURIComponent(key)}`);
+      const res = await fetch(getApiUrl(`/api/device/status?mac=${encodeURIComponent(mac)}&key=${encodeURIComponent(key)}`));
       if (res.ok) {
         const data = await res.json();
         setDeviceStatus({
@@ -292,7 +293,7 @@ export default function App() {
     setActivationError('');
     setActivationSuccess('');
     try {
-      const res = await fetch('/api/device/activate', {
+      const res = await fetch(getApiUrl('/api/device/activate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: macAddress, key: deviceKey, code })
@@ -320,7 +321,7 @@ export default function App() {
     setActivationError('');
     setActivationSuccess('');
     try {
-      const res = await fetch('/api/device/activate', {
+      const res = await fetch(getApiUrl('/api/device/activate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mac: macAddress, key: deviceKey, action: 'simulate_payment' })
