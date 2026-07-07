@@ -344,6 +344,7 @@ app.post("/api/playlist/save", (req, res) => {
 // API: Fetch playlists associated with MAC Address
 app.get("/api/playlist/get", (req, res) => {
   const mac = req.query.mac as string;
+  const key = req.query.key as string;
 
   if (!mac) {
     return res.status(400).json({ error: "MAC Address is required" });
@@ -351,8 +352,18 @@ app.get("/api/playlist/get", (req, res) => {
 
   const cleanMac = mac.trim().toUpperCase();
   
-  // Create device/account in database if not already present
-  ensureDeviceRegistered(cleanMac);
+  // Create device/account in database if not already present, utilizing the key if provided
+  ensureDeviceRegistered(cleanMac, key);
+
+  const devices = readDevicesDb();
+  const dev = devices[cleanMac];
+
+  // Verify key/PIN for portal connection security
+  if (key && dev && dev.key && dev.key.trim() !== key.trim()) {
+    return res.status(403).json({ 
+      error: "رمز الجهاز (Key / PIN) غير صحيح! يرجى إدخال الرمز الظاهر على شاشة التلفزيون بدقة. / Incorrect Device Key! Please enter the exact PIN shown on your TV screen." 
+    });
+  }
 
   const db = readDb();
   const playlists = db[cleanMac] || [];

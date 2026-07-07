@@ -199,15 +199,15 @@ export default function PortalView({
     setSuccess('');
 
     try {
-      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}`);
+      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`);
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
         setPlaylists(data.playlists || []);
         setIsLoggedIn(true);
         setSuccess(dict.statusConnected);
         fetchPortalDeviceStatus();
       } else {
-        setError(dict.generalError);
+        setError(data.error || dict.generalError);
       }
     } catch (err) {
       console.error(err);
@@ -219,7 +219,7 @@ export default function PortalView({
 
   const loadPlaylists = async () => {
     try {
-      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}`);
+      const response = await fetch(`/api/playlist/get?mac=${encodeURIComponent(macInput)}&key=${encodeURIComponent(keyInput)}`);
       if (response.ok) {
         const data = await response.json();
         setPlaylists(data.playlists || []);
@@ -875,32 +875,28 @@ export default function PortalView({
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <a 
-            href="https://flixghost.com/device/login" 
-            target="_blank" 
-            referrerPolicy="no-referrer"
+            href="https://fgtv.qzz.io" 
             className="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-cyan-500/30 rounded-xl transition-all group"
           >
             <div className="flex items-center gap-2.5">
               <span className="text-lg">🔐</span>
               <div className="text-left">
-                <span className="text-xs text-gray-400 block uppercase font-mono">{isAr ? 'تسجيل دخول الجهاز' : 'Device Portal'}</span>
-                <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">flixghost.com/device/login</span>
+                <span className="text-xs text-gray-400 block uppercase font-mono">{isAr ? 'بوابة إدارة الأجهزة' : 'Device Portal'}</span>
+                <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">fgtv.qzz.io</span>
               </div>
             </div>
             <ArrowRight className={`w-4 h-4 text-gray-600 group-hover:text-cyan-400 transition-colors ${isAr ? 'rotate-180' : ''}`} />
           </a>
 
           <a 
-            href="https://flixghost.com/support" 
-            target="_blank" 
-            referrerPolicy="no-referrer"
+            href="mailto:flixnettv@gmail.com" 
             className="flex items-center justify-between p-3 bg-black/60 border border-gray-800 hover:border-cyan-500/30 rounded-xl transition-all group"
           >
             <div className="flex items-center gap-2.5">
               <span className="text-lg">💬</span>
               <div className="text-left">
-                <span className="text-xs text-gray-400 block uppercase font-mono">{isAr ? 'الدعم الفني والمساعدة' : 'Technical Support'}</span>
-                <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">flixghost.com/support</span>
+                <span className="text-xs text-gray-400 block uppercase font-mono">{isAr ? 'الدعم الفني والبريد' : 'Technical Support'}</span>
+                <span className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">flixnettv@gmail.com</span>
               </div>
             </div>
             <ArrowRight className={`w-4 h-4 text-gray-600 group-hover:text-cyan-400 transition-colors ${isAr ? 'rotate-180' : ''}`} />
