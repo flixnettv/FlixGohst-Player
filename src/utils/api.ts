@@ -21,7 +21,7 @@ export function getApiUrl(path: string): string {
 
   // If statically hosted, route API requests to the custom proxy or tunnel domain
   if (isStaticHost) {
-    const apiBase = 'https://api.iptv1.qzz.io';
+    const apiBase = 'https://fgtv.qzz.io';
     // Ensure clean slash joining
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${apiBase}${cleanPath}`;
