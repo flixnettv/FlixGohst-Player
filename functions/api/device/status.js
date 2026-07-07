@@ -1,7 +1,7 @@
 export async function onRequest(context) {
   const { request } = context;
   const url = new URL(request.url);
-  const targetUrl = 'http://65.75.200.19:3002' + url.pathname + url.search;
+  const targetUrl = 'https://api.fgtv.qzz.io' + url.pathname + url.search;
   try {
     const response = await fetch(targetUrl);
     const respHeaders = new Headers(response.headers);
