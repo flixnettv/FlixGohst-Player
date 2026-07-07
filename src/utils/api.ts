@@ -19,9 +19,9 @@ export function getApiUrl(path: string): string {
     hostname.includes('webos') || 
     hostname.includes('tizen');
 
-  // If statically hosted, route API requests to the running Cloud Run deployment container
+  // If statically hosted, route API requests to the custom proxy or tunnel domain
   if (isStaticHost) {
-    const apiBase = 'https://ais-pre-bcyytbfpp3xkbn46ejp2ze-176663467173.europe-west1.run.app';
+    const apiBase = 'https://api.iptv1.qzz.io';
     // Ensure clean slash joining
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     return `${apiBase}${cleanPath}`;
