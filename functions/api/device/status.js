@@ -1,11 +1,13 @@
 export async function onRequest(context) {
   try {
-    const response = await fetch('http://65.75.200.19:3002/api/device/status');
-    return new Response(response.body, { status: response.status, headers: response.headers });
+    const response = await fetch('https://api.cloudflare.com');
+    return new Response(JSON.stringify({ ok: response.ok, status: response.status }), {
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Backend unreachable' }), {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 502,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
