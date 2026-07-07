@@ -287,7 +287,7 @@ export default function PortalView({
         if (onPlaylistsChanged) onPlaylistsChanged();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || errorData.message || dict.generalError);
+        setError(errorData.message || dict.generalError);
       }
     } catch (err) {
       console.error(err);
